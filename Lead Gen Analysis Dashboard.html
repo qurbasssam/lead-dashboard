@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Lead Intelligence Dashboard — Live</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0c14;--s1:#12151f;--s2:#1a1e2e;--s3:#22273a;--br:#2a2f45;
+  --p1:#7c6bff;--p2:#00e5b8;--p3:#ff6b6b;--p4:#ffd166;--p5:#4ecdc4;--p6:#b8b0ff;
+  --tx:#eef0ff;--tx2:#8b90b0;--tx3:#5a6080}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #00e5b866}50%{box-shadow:0 0 0 7px transparent}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes newrow{0%{background:#00e5b822}100%{background:transparent}}
+.topbar{background:linear-gradient(90deg,#7c6bff1a,#00e5b81a,#7c6bff1a);border-bottom:1px solid var(--br);padding:7px 22px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--tx2)}
+.ldot{width:8px;height:8px;border-radius:50%;background:#00e5b8;display:inline-block;margin-right:7px;animation:pulse 1.4s ease-in-out infinite}
+header{background:var(--s1);border-bottom:1px solid var(--br);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.logo{display:flex;align-items:center;gap:12px}
+.lico{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#7c6bff,#00e5b8);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 18px #7c6bff44}
+.logo h1{font-size:16px;font-weight:800}.logo p{font-size:10px;color:var(--tx2);margin-top:1px}
+.hr{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.badge{padding:4px 11px;border-radius:20px;font-size:10px;font-weight:700}
+.bg{background:#00e5b818;border:1px solid #00e5b840;color:#00e5b8}
+.by{background:#ffd16618;border:1px solid #ffd16640;color:#ffd166}
+.br2{background:#ff6b6b18;border:1px solid #ff6b6b40;color:#ff6b6b}
+.btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:700;font-family:'Inter',sans-serif;transition:all .15s;display:flex;align-items:center;gap:6px}
+.bp{background:linear-gradient(135deg,#7c6bff,#00e5b8);color:#fff;box-shadow:0 3px 12px #7c6bff33}
+.bp:hover{transform:translateY(-1px)}.bp:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.bgh{background:var(--s3);border:1px solid var(--br);color:var(--tx2)}.bgh:hover{border-color:var(--p1);color:var(--tx)}
+.rfi{display:inline-block}.rfi.spin{animation:spin .7s linear infinite}
+.isel{padding:5px 9px;border-radius:7px;background:var(--s3);border:1px solid var(--br);color:var(--tx);font-size:10px;outline:none;cursor:pointer}
+.nb{animation:fadeIn .3s ease}
+.nok{background:#00e5b810;border-bottom:1px solid #00e5b828;color:#00e5b8;padding:9px 22px;font-size:11px;display:flex;align-items:center;gap:8px}
+.nwarn{background:#ffd16610;border-bottom:1px solid #ffd16628;color:#ffd166;padding:9px 22px;font-size:11px;display:flex;align-items:center;gap:8px}
+.ninfo{background:#7c6bff10;border-bottom:1px solid #7c6bff28;color:#b8b0ff;padding:9px 22px;font-size:11px;display:flex;align-items:center;gap:8px}
+main{padding:20px 22px;max-width:1700px;margin:0 auto}
+.kg{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:15px 13px;position:relative;overflow:hidden;transition:transform .15s;cursor:default}
+.kpi:hover{transform:translateY(-2px)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2.5px;background:var(--kc,linear-gradient(90deg,#7c6bff,#00e5b8));border-radius:13px 13px 0 0}
+.ki{font-size:20px;margin-bottom:8px;display:block}.kl{font-size:9px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.7px}
+.kv{font-size:28px;font-weight:900;color:#fff;margin:2px 0;line-height:1}.ks{font-size:9px;color:var(--tx3);margin-top:1px}
+.kp{position:absolute;top:11px;right:11px;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700}
+.pg{background:#00e5b818;color:#00e5b8}.py{background:#ffd16618;color:#ffd166}.pb{background:#7c6bff18;color:#b8b0ff}
+.grid{display:grid;gap:14px;margin-bottom:16px}
+.g3{grid-template-columns:1fr 1fr 1fr}.g21{grid-template-columns:2fr 1fr}.g12{grid-template-columns:1fr 2fr}
+.card{background:var(--s1);border:1px solid var(--br);border-radius:14px;padding:16px;transition:box-shadow .15s}
+.card:hover{box-shadow:0 5px 24px #0006}
+.ch{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:13px}
+.ct{font-size:12px;font-weight:700}.cs{font-size:9.5px;color:var(--tx2);margin-top:1px}
+.ctag{padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;background:var(--s3);color:var(--tx2);border:1px solid var(--br);white-space:nowrap;flex-shrink:0;margin-left:7px}
+.sec{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+.sec h2{font-size:13px;font-weight:800;white-space:nowrap}.sl{flex:1;height:1px;background:var(--br)}
+.pl{display:flex;flex-direction:column;gap:10px}
+.pr{display:flex;justify-content:space-between;margin-bottom:4px}
+.plbl{font-size:11px;font-weight:500}.pval{font-size:11px;font-weight:700;color:var(--tx2)}
+.pt{height:6px;border-radius:3px;background:var(--s3);overflow:hidden}
+.pf{height:100%;border-radius:3px;transition:width 1s ease}
+.ig{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.ins{background:var(--s1);border:1px solid var(--br);border-radius:12px;padding:13px;border-left:3px solid var(--ic,#7c6bff);display:flex;gap:10px;align-items:flex-start;transition:transform .15s}
+.ins:hover{transform:translateX(2px)}.ii{font-size:20px;flex-shrink:0;margin-top:1px}
+.it{font-size:11px;font-weight:700;margin-bottom:3px}.ib{font-size:10.5px;color:var(--tx2);line-height:1.5}
+.tc{background:var(--s1);border:1px solid var(--br);border-radius:14px;padding:16px;margin-bottom:16px}
+.fb{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.si2{flex:1;min-width:160px;padding:7px 12px;border-radius:7px;background:var(--s2);border:1px solid var(--br);color:var(--tx);font-size:11px;outline:none;font-family:'Inter',sans-serif}
+.si2:focus{border-color:var(--p1)}
+.fs{padding:7px 10px;border-radius:7px;background:var(--s2);border:1px solid var(--br);color:var(--tx);font-size:11px;outline:none;cursor:pointer}
+.tw{overflow-x:auto;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead tr{background:var(--s3)}
+th{padding:8px 12px;text-align:left;color:var(--tx2);font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--br);color:var(--tx);white-space:nowrap;max-width:210px;overflow:hidden;text-overflow:ellipsis}
+tbody tr:hover{background:#ffffff06}tbody tr:last-child td{border-bottom:none}
+.tg{display:inline-block;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700}
+.t1{background:#7c6bff1a;color:#b8b0ff}.t2{background:#00e5b81a;color:#00e5b8}
+.t3{background:#ff6b6b1a;color:#ff6b6b}.t4{background:#ffd1661a;color:#ffd166}.t5{background:#4ecdc41a;color:#4ecdc4}
+.lnk{color:var(--p1);text-decoration:none;font-size:10px;font-weight:600}.lnk:hover{color:var(--p2)}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--s1);border:1px solid var(--br);border-radius:12px;padding:11px 16px;font-size:11px;font-weight:600;box-shadow:0 8px 30px #000a;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s;display:flex;align-items:center;gap:7px;max-width:340px}
+.toast.show{transform:translateY(0);opacity:1}
+footer{text-align:center;padding:14px;color:var(--tx3);font-size:10px;border-top:1px solid var(--br)}
+@media(max-width:1100px){.g3,.g21,.g12{grid-template-columns:1fr}.kg{grid-template-columns:repeat(3,1fr)}.ig{grid-template-columns:1fr 1fr}main{padding:12px 14px}}
+@media(max-width:600px){.kg{grid-template-columns:repeat(2,1fr)}.ig{grid-template-columns:1fr}header{flex-direction:column;gap:8px}}
+</style></head><body>
+<div class="topbar">
+  <span><span class="ldot" id="ldot"></span><span id="topSt">Initializing...</span></span>
+  <span style="color:var(--tx3);font-size:10px">⏱ Next refresh in <b id="cd">—</b>s &nbsp;|&nbsp; Fetched: <span id="lf">—</span></span>
+</div>
+<header>
+  <div class="logo"><div class="lico">📊</div>
+    <div><h1>Lead Intelligence Dashboard</h1><p>Live Google Sheets · Auto-updating</p></div>
+  </div>
+  <div class="hr">
+    <span class="badge bg" id="cbadge">🔄 Connecting...</span>
+    <select class="isel" id="isel" onchange="setR(this.value)">
+      <option value="30">30 sec</option><option value="60" selected>1 min</option>
+      <option value="300">5 min</option><option value="600">10 min</option>
+    </select>
+    <button class="btn bp" id="rfb" onclick="manRf()"><span class="rfi" id="rfic">↻</span> Refresh Now</button>
+  </div>
+</header>
+<div id="nb"></div>
+<main>
+<div class="kg">
+  <div class="kpi" style="--kc:linear-gradient(90deg,#7c6bff,#b8b0ff)"><span class="ki">👥</span><div class="kl">Total Leads</div><div class="kv" id="k1">—</div><div class="ks">All contacts</div><span class="kp pb" id="k1p">—</span></div>
+  <div class="kpi" style="--kc:linear-gradient(90deg,#00e5b8,#06d6a0)"><span class="ki">🤝</span><div class="kl">Meetings Held</div><div class="kv" id="k2">—</div><div class="ks" id="k2s">—</div><span class="kp pg">✓</span></div>
+  <div class="kpi" style="--kc:linear-gradient(90deg,#ffd166,#f4a261)"><span class="ki">🕐</span><div class="kl">Interested Future</div><div class="kv" id="k3">—</div><div class="ks">Warm pipeline</div><span class="kp py">→ Nurture</span></div>
+  <div class="kpi" style="--kc:linear-gradient(90deg,#ff6b6b,#ff8fab)"><span class="ki">🏭</span><div class="kl">Industries</div><div class="kv" id="k4">—</div><div class="ks">Sectors</div></div>
+  <div class="kpi" style="--kc:linear-gradient(90deg,#4ecdc4,#06d6a0)"><span class="ki">📍</span><div class="kl">Cities</div><div class="kv" id="k5">—</div><div class="ks">Geo reach</div></div>
+  <div class="kpi" style="--kc:linear-gradient(90deg,#b8b0ff,#7c6bff)"><span class="ki">💼</span><div class="kl">Top Level</div><div class="kv" id="k6" style="font-size:16px;margin-top:4px">—</div><div class="ks" id="k6s">—</div></div>
+</div>
+<div class="sec"><h2>📊 Core Analytics</h2><div class="sl"></div></div>
+<div class="grid g3">
+  <div class="card"><div class="ch"><div><div class="ct">🏭 Industry Breakdown</div><div class="cs">Sector distribution</div></div><span class="ctag">Donut</span></div><div style="position:relative;height:230px"><canvas id="cInd"></canvas></div></div>
+  <div class="card"><div class="ch"><div><div class="ct">📅 Meeting Pipeline</div><div class="cs">Status overview</div></div><span class="ctag">Donut</span></div><div style="position:relative;height:230px"><canvas id="cMtg"></canvas></div></div>
+  <div class="card"><div class="ch"><div><div class="ct">📍 Geographic Reach</div><div class="cs">Leads by city</div></div><span class="ctag">Bar</span></div><div style="position:relative;height:230px"><canvas id="cLoc"></canvas></div></div>
+</div>
+<div class="sec"><h2>🔥 Cross-Analysis</h2><div class="sl"></div></div>
+<div class="grid g21">
+  <div class="card"><div class="ch"><div><div class="ct">🔥 Industry × Management Heatmap</div><div class="cs">Seniority across industries</div></div><span class="ctag">Stacked Bar</span></div><div style="position:relative;height:270px"><canvas id="cHeat"></canvas></div></div>
+  <div class="card"><div class="ch"><div><div class="ct">🎯 Seniority Distribution</div><div class="cs">Management levels</div></div><span class="ctag">Polar</span></div><div style="position:relative;height:270px"><canvas id="cPolar"></canvas></div></div>
+</div>
+<div class="sec"><h2>🏆 Company &amp; Conversion</h2><div class="sl"></div></div>
+<div class="grid g3">
+  <div class="card"><div class="ch"><div><div class="ct">🏢 Top Companies</div><div class="cs">By lead count</div></div><span class="ctag">Horiz Bar</span></div><div style="position:relative;height:255px"><canvas id="cCo"></canvas></div></div>
+  <div class="card"><div class="ch"><div><div class="ct">🗺 City × Meeting Status</div><div class="cs">Conversion by city</div></div><span class="ctag">Grouped Bar</span></div><div style="position:relative;height:255px"><canvas id="cCM"></canvas></div></div>
+  <div class="card"><div class="ch"><div><div class="ct">📈 Industry Coverage</div><div class="cs">% share</div></div><span class="ctag">Progress</span></div><div class="pl" id="pInd"></div></div>
+</div>
+<div class="grid g12" style="margin-bottom:16px">
+  <div class="card"><div class="ch"><div><div class="ct">📊 Management Funnel</div><div class="cs">Seniority reach %</div></div><span class="ctag">Progress</span></div><div class="pl" id="pMgmt"></div></div>
+  <div class="card"><div class="ch"><div><div class="ct">⚡ Quick Stats</div><div class="cs">Key metrics</div></div></div><div id="ms" style="display:flex;flex-direction:column;gap:8px"></div></div>
+</div>
+<div class="sec"><h2>💡 AI-Generated Insights</h2><div class="sl"></div></div>
+<div class="ig" id="ig"></div>
+<div class="sec"><h2>📋 Lead Intelligence Table</h2><div class="sl"></div><span style="font-size:10px;color:var(--tx2)" id="tc2">—</span></div>
+<div class="tc">
+  <div class="fb">
+    <input class="si2" id="srch" placeholder="🔍 Search name, company, designation..." oninput="fTbl()"/>
+    <select class="fs" id="fI" onchange="fTbl()"><option value="">All Industries</option></select>
+    <select class="fs" id="fM" onchange="fTbl()"><option value="">All Levels</option></select>
+    <select class="fs" id="fC" onchange="fTbl()"><option value="">All Cities</option></select>
+    <select class="fs" id="fS" onchange="fTbl()"><option value="">All Statuses</option></select>
+    <button class="btn bgh" onclick="clrF()" style="font-size:10px">✕ Clear</button>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>Lead Name</th><th>Company</th><th>Industry</th><th>Designation</th><th>Level</th><th>City</th><th>Status</th><th>LinkedIn</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table></div>
+</div>
+</main>
+<footer>Lead Intelligence Dashboard · Live Google Sheets · <span id="ft"></span></footer>
+<div class="toast" id="toast"></div><script>
+const PUB='2PACX-1vRNVwRgnzgDr1TVNnin70KN8k9Vxjd9GNjDdZVH3flAMwDpKhSwX4InZvEr1DKCCpZLuirjcTwE0HjE';
+const CSV_URL='https://docs.google.com/spreadsheets/d/e/'+PUB+'/pub?gid=0&single=true&output=csv';
+const PAL=['#7c6bff','#00e5b8','#ff6b6b','#ffd166','#4ecdc4','#b8b0ff','#ff8fab','#06d6a0','#f4a261','#74b9ff','#e17055','#00b894','#0984e3','#fd79a8'];
+const SEED=[{"Lead Name": "Vikram Balakrishna, Madhav Kulkarni", "LinkedIn Profile": "https://www.linkedin.com/in/vikrambalakrishna/", "Company": "ATOS", "Industry": "IT & Software", "Designation": "Senior Director - AI", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": "Non commercial engagement for now, will engage commercially later"}, {"Lead Name": "Srikanth Sathiyanarayanan", "LinkedIn Profile": "https://www.linkedin.com/in/srikanthinaction/overlay/about-this-profile/", "Company": "Uno Minda", "Industry": "Automotive", "Designation": "Head - Advanced Technology Group", "Management Level": "Head", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": "Currently, they are not looking at membership. he will connect with us once they formalize any opportunities."}, {"Lead Name": "Ramesh Viswanathan", "LinkedIn Profile": "https://www.linkedin.com/in/rameshviswanathan/", "Company": "Havells", "Industry": "Manufacturing", "Designation": "Executive Vice President and Head, Center for Research & Innovation - Bangalore", "Management Level": "VP", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": "Decks sent, they are still exploring startup engaements, will reach once they are ready."}, {"Lead Name": "Dr. Amod Jai Ganesh Anandkumar", "LinkedIn Profile": "https://www.linkedin.com/in/ajga2/", "Company": "HARMAN International", "Industry": "Automotive", "Designation": "Director of Engineering", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": "He does\u2019t have bandwidth to follow up on this for a quarter. Let us connect again in the future."}, {"Lead Name": "Raghusrikanth Thotakura", "LinkedIn Profile": "https://www.linkedin.com/in/raghusrikanth-t-08307215/", "Company": "Pearson", "Industry": "Education", "Designation": "Director of Software Engineering", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": "Active Conversation, recently met their senior team in Bengaluru on 10th of Feb."}, {"Lead Name": "Kishore Seetharam, Garima Gupta", "LinkedIn Profile": "http://www.linkedin.com/in/kishoreseetharam", "Company": "TAFE", "Industry": "Automotive", "Designation": "Principal - Corporate Strategy", "Management Level": "Other", "Location": "Chennai", "Meeting Status": "Meeting Held", "Notes": "Decks Sent, they asked for our corporate Innovation offerings, some Startups & Case studies relevant to Tafe."}, {"Lead Name": "Sharad Nigam", "LinkedIn Profile": "http://www.linkedin.com/in/sharadnigam", "Company": "Hitachi", "Industry": "Manufacturing", "Designation": "Group Sr. VP - Strategy, Business Development/Incubation, & Digital Transformation, APAC/India", "Management Level": "VP", "Location": "", "Meeting Status": "Meeting Held", "Notes": "Decks Sent, they asked for our corporate Innovation offerings, He asked for Japan engagementss & Case studies relevant to automotive"}, {"Lead Name": "Manu Ram", "LinkedIn Profile": "http://www.linkedin.com/in/manu-ram", "Company": "ETG", "Industry": "Logistics", "Designation": "Head of Risk Solutions & Engineering", "Management Level": "Head", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": "Asked us to reachout in Feb month, he will come up with problem statements, Took the follow up. They are currently bit busy with the year-end activities, As part of the digital initiatives in the upcoming FY, Venkat or himself will reach out to us, post May."}, {"Lead Name": "Rohit Punnoose, Magesh", "LinkedIn Profile": "http://www.linkedin.com/in/rohit-punnoose", "Company": "Assurant", "Industry": "BFSI", "Designation": "VP, Data Sciences, Global AI Leader", "Management Level": "VP", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": "Positive conversation, had 3 levels of meetings, they are reviewing the proposal, wanted to start in the month of March, follow up done."}, {"Lead Name": "Priyanka Shukla", "LinkedIn Profile": "http://www.linkedin.com/in/priyankashukla01", "Company": "HCLTech", "Industry": "IT & Software", "Designation": "Head of Data, Insights and Automation - Global Digital Marketing", "Management Level": "Head", "Location": "Delhi", "Meeting Status": "Meeting Held", "Notes": "She will connect Vishnu Teja with the concerned talent marketing team immediately after receiving his summary email. She will speak with the concerned business person on Tuesday to discuss collaborating with T-Hub and then get back to us. Decks sent and follow up taken"}, {"Lead Name": "Ashish Nainawatee, Arpit Mundra", "LinkedIn Profile": "http://www.linkedin.com/in/ashishnainawatee", "Company": "Endurance Technologies", "Industry": "Automotive", "Designation": "Executive Vice President and Chief Strategy Officer", "Management Level": "VP", "Location": "Pune", "Meeting Status": "Meeting Held", "Notes": "They have put the project on hold for now due to more pressing priorities. They will come back when we resume on this topic."}, {"Lead Name": "GPJ Gupta", "LinkedIn Profile": "linkedin.com/in/gpj-gupta-51272877", "Company": "Aditya Birla Capital", "Industry": "BFSI", "Designation": "Head Large Tech Programs, Innovation and Transformation", "Management Level": "Head", "Location": "Mumbai", "Meeting Status": "Meeting Held", "Notes": "He marked his colleague Mr. Sameer Jadhav who runs Infinite programs and does the hackathons with start ups to see what all opportunities to work together. Mail sent to sameer, response awaited and follow up has to be taken"}, {"Lead Name": "Valentine Oliver", "LinkedIn Profile": "", "Company": "Airbus", "Industry": "Airline", "Designation": "Sourcing", "Management Level": "Other", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": "She will have a quick chat with Sid next week and then reach back to us"}, {"Lead Name": "Chandramouli Bragadeesh", "LinkedIn Profile": "https://www.linkedin.com/in/bragadeeshc/", "Company": "ZF", "Industry": "Automotive", "Designation": "Regional Innovation Lead", "Management Level": "Other", "Location": "Chennai", "Meeting Status": "Meeting Held", "Notes": "Decks sent - overview of T-Hub along with a snapshot of automotive AI startups from our deep-tech portfolio, he I will go through and revert in few days, follow up has to be taken."}, {"Lead Name": "Sameer Sabarwal", "LinkedIn Profile": "https://www.linkedin.com/in/sameer-sabharwal-a553953/", "Company": "TCS", "Industry": "IT & Software", "Designation": "Director, Business Growth - TCS Co-Innovation Network (COIN)", "Management Level": "Director", "Location": "Delhi", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Indrajit Kar", "LinkedIn Profile": "https://www.linkedin.com/in/indrajit-kar/", "Company": "Wipro", "Industry": "IT & Software", "Designation": "GM-Head of Advanced AI & Strategic Innovation", "Management Level": "Head", "Location": "Delhi", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Bala Peddigari", "LinkedIn Profile": "https://www.linkedin.com/in/balasparks/", "Company": "TCS", "Industry": "IT & Software", "Designation": "Chief Innovation Officer", "Management Level": "C-Level", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Vivek Menon, Subroto Gupta", "LinkedIn Profile": "https://www.linkedin.com/in/vivekmenon1985/", "Company": "Compass Group", "Industry": "Hospitality", "Designation": "Deputy General Manager - Sustainability and Transformation Lead", "Management Level": "General Manager", "Location": "", "Meeting Status": "Meeting Held", "Notes": "Proposal sent, NDA is under review, Phase 1 - proiblem starement - Problem starement with internal team defining problem statement, outreach program where they have problem startup with mature staratup, Phase 2 - Evaluate the startup, boot camp, memo day"}, {"Lead Name": "Khushboo Bakhru", "LinkedIn Profile": "https://www.linkedin.com/in/khushboo-bakhru-65964360/", "Company": "Axis Bank", "Industry": "BFSI", "Designation": "VP Corporate Banking", "Management Level": "VP", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": "She asked us to connect them with GCCs, we will reach out to her once we have some GCC event"}, {"Lead Name": "Sanjeev Agrawal", "LinkedIn Profile": "https://www.linkedin.com/in/sanjeev-agrawal-7aa0137/", "Company": "BlueStar", "Industry": "Manufacturing", "Designation": "Group Chief Technology Officer at Blue Star Limited", "Management Level": "C-Level", "Location": "Delhi", "Meeting Status": "Meeting Held", "Notes": "They want services for free"}, {"Lead Name": "Lalit Sharma", "LinkedIn Profile": "https://www.linkedin.com/in/lalitsharma81/", "Company": "Yamaha", "Industry": "Automotive", "Designation": "Head Emerging Technology and Innovation Centre", "Management Level": "Head", "Location": "", "Meeting Status": "Meeting Held", "Notes": "Lalit Sharma will have another discussion or reach out to Sahil to discuss potential innovation mandates where T-Hub can complement, focusing on the themes of Autonomous Mobility (AMR), agriculture, medical, smart manufacturing, and Industry 4.2/AI. Mail sent to sahil response awaited."}, {"Lead Name": "Mukundan Madhavan", "LinkedIn Profile": "https://www.linkedin.com/in/mukundan-madhavan/", "Company": "Hexaware", "Industry": "IT & Software", "Designation": "Assistant Vice President", "Management Level": "VP", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Nilay Shastri", "LinkedIn Profile": "https://www.linkedin.com/in/nilayshastri/", "Company": "Roche", "Industry": "Pharma", "Designation": "General Manager", "Management Level": "General Manager", "Location": "", "Meeting Status": "Interested Future", "Notes": ""}, {"Lead Name": "Parth Cholera", "LinkedIn Profile": "https://www.linkedin.com/in/parthcholera/", "Company": "Cyient", "Industry": "IT & Software", "Designation": "Director - Automation & Transformation", "Management Level": "Director", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Vijayshree", "LinkedIn Profile": "https://www.linkedin.com/in/vijayshree-narayanan-03816746/", "Company": "Tata Projects", "Industry": "Construction", "Designation": "Business Excellence", "Management Level": "Other", "Location": "Delhi", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Amit Shrivastava", "LinkedIn Profile": "https://www.linkedin.com/in/amitsrii/", "Company": "Stellantis", "Industry": "Automotive", "Designation": "Director EHE, India and Asia Pacific", "Management Level": "Director", "Location": "", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Saurabh Sahay", "LinkedIn Profile": "https://www.linkedin.com/in/saurabh-sahay-47442821/", "Company": "Tata Communication", "Industry": "Telecom", "Designation": "Director Corporate Strategy: Customer Co Innovation, Growth, Ventures", "Management Level": "Director", "Location": "Delhi", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Manimaran Chandrasekar", "LinkedIn Profile": "https://www.linkedin.com/in/manimaran-chandrasekar/", "Company": "LTM", "Industry": "Manufacturing", "Designation": "Director - Data Engineering", "Management Level": "Director", "Location": "Chennai", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Vasumitra", "LinkedIn Profile": "https://www.linkedin.com/in/vasumitra-pandey-20892a377/", "Company": "Surya", "Industry": "Manufacturing", "Designation": "CEO, Lighting and Durables", "Management Level": "Director", "Location": "Delhi", "Meeting Status": "Interested Future", "Notes": ""}, {"Lead Name": "Koushik Kottamasu", "LinkedIn Profile": "https://www.linkedin.com/in/koushik-kottamasu-b484b6101/", "Company": "Zepto", "Industry": "E-commerce", "Designation": "Senior Director of Engineering", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Devika Garg", "LinkedIn Profile": "https://www.linkedin.com/in/devika-garg-2900b943/", "Company": "Indusind Bank", "Industry": "BFSI", "Designation": "Head-Liabilties, Corporate and Commercial Banking Group", "Management Level": "Head", "Location": "Delhi", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Ernesto", "LinkedIn Profile": "https://www.linkedin.com/in/ernestocamachoiii/", "Company": "1871", "Industry": "IT & Software", "Designation": "Head of Innovation and Partnership Experience", "Management Level": "Head", "Location": "USA", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Richin gupta", "LinkedIn Profile": "https://www.linkedin.com/in/richin/", "Company": "Cholamandalam", "Industry": "BFSI", "Designation": "Head of Quality Engineering", "Management Level": "Head", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Anand Chandramouli", "LinkedIn Profile": "https://www.linkedin.com/in/anand-chandramouli-06593b52/", "Company": "LTM", "Industry": "Manufacturing", "Designation": "Head, Global Capability Center Solutions", "Management Level": "Head", "Location": "", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Vinay Kumar", "LinkedIn Profile": "https://www.linkedin.com/in/rvinay-kumar/", "Company": "Intellect", "Industry": "IT & Software", "Designation": "Senior Vice President, Head GCC", "Management Level": "VP", "Location": "", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Sivakumar Selvaganapathy", "LinkedIn Profile": "https://www.linkedin.com/in/sivakumarsg/", "Company": "Jonson Controlls", "Industry": "Manufacturing", "Designation": "VP - Software Engineering || Head - Open Blue India & APAC Solutions || Director - JCIPL", "Management Level": "VP", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Shilpa Ahir", "LinkedIn Profile": "https://www.linkedin.com/in/shilpa-ahir-716817a/", "Company": "Sandoz", "Industry": "Pharma", "Designation": "Globally leading GCC Strategy, Performance & Analytics", "Management Level": "Head", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Rahul More", "LinkedIn Profile": "https://www.linkedin.com/in/rzmore/", "Company": "Sriram Life", "Industry": "BFSI", "Designation": "Vice President and Head of Innovation", "Management Level": "VP", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Ananth siddanthi", "LinkedIn Profile": "https://www.linkedin.com/in/ananth-siddanthi-3328414/", "Company": "CommScope", "Industry": "Telecom", "Designation": "Sr Director, India IT Center at CommScope", "Management Level": "Director", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Pranay Prasad", "LinkedIn Profile": "https://www.linkedin.com/in/pranayprasad/", "Company": "Turing", "Industry": "IT & Software", "Designation": "Director, Strategy and Operations", "Management Level": "Director", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Sreekanth", "LinkedIn Profile": "https://www.linkedin.com/in/dr-srikanth-veluru-phd-1a4800190/", "Company": "Narayana Group", "Industry": "Healthcare", "Designation": "Head, Strategy & Growth", "Management Level": "Head", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "NEELIMA BURRA", "LinkedIn Profile": "https://www.linkedin.com/in/neelimaburra/", "Company": "Luminous", "Industry": "Energy", "Designation": "Chief Strategy and Transformation Officer", "Management Level": "C-Level", "Location": "Delhi", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Ajay Masih", "LinkedIn Profile": "https://www.linkedin.com/in/ajay-masih-b2443831/", "Company": "Sandoz", "Industry": "Pharma", "Designation": "Global Head TPRM Strategy & Service Delivery", "Management Level": "Head", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Aqueel Merchant", "LinkedIn Profile": "https://www.linkedin.com/in/aqueelmerchant/", "Company": "Randstad", "Industry": "HR Services", "Designation": "President at Randstad Global Capability Center", "Management Level": "C-Level", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Harinikaa kidambi", "LinkedIn Profile": "https://www.linkedin.com/in/harinikaa-kidambi-527b3b4/", "Company": "Electronic arts", "Industry": "IT & Software", "Designation": "Director and Country Lead - People Partnerships- EA India", "Management Level": "Director", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Yusufzai Khan", "LinkedIn Profile": "https://www.linkedin.com/in/yusufzaiskhan/", "Company": "LTM", "Industry": "Manufacturing", "Designation": "AVP - Product Engineering Leader (BlueVerse)", "Management Level": "VP", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Roopa Sankaran", "LinkedIn Profile": "https://www.linkedin.com/in/roopa-sankaran-863ba6344/", "Company": "Unilever", "Industry": "FMCG", "Designation": "Global Lead for IT Service Resilience | Office of the CIO", "Management Level": "Head", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Sravan Mudigonda\n Umar NATH", "LinkedIn Profile": "https://www.linkedin.com/in/umar-nath-4756493/", "Company": "F5", "Industry": "IT & Software", "Designation": "Sr.Director Product Development", "Management Level": "Director", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Sainath Avadhuta", "LinkedIn Profile": "https://www.linkedin.com/in/sainath-avadhuta/", "Company": "NSPIRA", "Industry": "Education", "Designation": "Vice President - Engineering & Technology", "Management Level": "VP", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Sravankumar Chintkuntlawar", "LinkedIn Profile": "https://www.linkedin.com/in/sravankumar-chintkuntlawar-84083b22/", "Company": "AMD", "Industry": "IT & Software", "Designation": "Director Silicon Design Engineering at AMD", "Management Level": "Director", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Nupur Soni", "LinkedIn Profile": "https://www.linkedin.com/in/dr-nupur-2k20/", "Company": "Amgen", "Industry": "Pharma", "Designation": "Director R&D Informatics (Technology)", "Management Level": "Director", "Location": "Hyderabad", "Meeting Status": "Interested Future", "Notes": ""}, {"Lead Name": "Srikar Edumudi\n Sai Simha", "LinkedIn Profile": "https://www.linkedin.com/in/srikaredumudi/", "Company": "NxtWave", "Industry": "Education", "Designation": "Vice President - Partnerships", "Management Level": "VP", "Location": "Hyderabad", "Meeting Status": "Interested Future", "Notes": ""}, {"Lead Name": "Sushila Varma", "LinkedIn Profile": "https://www.linkedin.com/in/sushila-varma/", "Company": "Care", "Industry": "Healthcare", "Designation": "Head of Design Centre", "Management Level": "Head", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Anup Kiran", "LinkedIn Profile": "https://www.linkedin.com/in/anupkiran/", "Company": "Xceed Beyond", "Industry": "IT & Software", "Designation": "Founder & CEO", "Management Level": "C-Level", "Location": "", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Saurabh Mittal", "LinkedIn Profile": "https://www.linkedin.com/in/saurabh-mittal-8204539/", "Company": "Raychemrpg", "Industry": "Manufacturing", "Designation": "Head of Strategy & Incubation", "Management Level": "Head", "Location": "Pune", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Rajiv Pandey", "LinkedIn Profile": "http://www.linkedin.com/in/rajiv-pandey-78ba0", "Company": "Tata Motors", "Industry": "Automotive", "Designation": "CTO | AI & Agentics | Digital Transformation & Delivery", "Management Level": "C-Level", "Location": "Bengaluru", "Meeting Status": "Interested Future", "Notes": ""}, {"Lead Name": "Shyam Harinath", "LinkedIn Profile": "https://www.linkedin.com/in/shyamnath-harinath-19640a2/", "Company": "Siemens Healthineers", "Industry": "Healthcare", "Designation": "Head, SHIFT Innovation Center Bengaluru", "Management Level": "Head", "Location": "Bengaluru", "Meeting Status": "Interested Future", "Notes": ""}, {"Lead Name": "Kishan Kona A N", "LinkedIn Profile": "https://www.linkedin.com/in/kishan-kona-a33396b/", "Company": "Amara Raja", "Industry": "Energy", "Designation": "Head \u2013 Strategic Integration", "Management Level": "Head", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Kathiravan", "LinkedIn Profile": "https://www.linkedin.com/in/kathiravand/", "Company": "Intel", "Industry": "IT & Software", "Designation": "Senior Director - Silicon & Platform Engineering (Client, Data Center, AI & Edge)", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Interested Future", "Notes": ""}, {"Lead Name": "Tulshekar", "LinkedIn Profile": "https://www.linkedin.com/in/tulshekar-gangireddy/", "Company": "JPMorgan Chase & Co", "Industry": "BFSI", "Designation": "Executive Director & Head of Data Strategy \u2013 Trust & Safety", "Management Level": "Director", "Location": "Hyderabad", "Meeting Status": "Interested Future", "Notes": ""}, {"Lead Name": "Venkatesh Duraisamy", "LinkedIn Profile": "https://www.linkedin.com/in/venkateshduraisamy/", "Company": "SanDisk", "Industry": "IT & Software", "Designation": "Director, Data Engineering", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Nidhi Hatwalne", "LinkedIn Profile": "https://www.linkedin.com/in/nidhi-hatwalne-78014616/", "Company": "Societe Generale Global Solution Centre", "Industry": "BFSI", "Designation": "VP - Head Technology Capability Hub", "Management Level": "VP", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Rajesh Navale", "LinkedIn Profile": "https://www.linkedin.com/in/rajesh-navale-6067a219/", "Company": "Intel", "Industry": "IT & Software", "Designation": "Director of Engineering, All Cores Engineering (ACE) at Intel Corporation", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Shaji Kizhakke Namath", "LinkedIn Profile": "https://www.linkedin.com/in/shaji-namath/", "Company": "Honeywell", "Industry": "Manufacturing", "Designation": "Director - Leading digital product strategy and innovation in smart energy solutions", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Anindya", "LinkedIn Profile": "https://www.linkedin.com/in/anindya-sengupta-04062018/", "Company": "Brandworks Technology", "Industry": "IT & Software", "Designation": "Director", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Amey Patil", "LinkedIn Profile": "https://www.linkedin.com/in/ameyspatil/", "Company": "Google", "Industry": "IT & Software", "Designation": "Director of Software Engineering - Youtube", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Gaurav Jalan", "LinkedIn Profile": "https://www.linkedin.com/in/gjalan/", "Company": "Marvell", "Industry": "IT & Software", "Designation": "AVP Engineering", "Management Level": "VP", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Subburayan Umapathi", "LinkedIn Profile": "https://www.linkedin.com/in/subburayan-umapathi-23b51719/", "Company": "Fidelity Investments", "Industry": "BFSI", "Designation": "Director Software Engineer", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Saathvik K V", "LinkedIn Profile": "https://www.linkedin.com/in/saathvik-kv/", "Company": "SAP", "Industry": "IT & Software", "Designation": "Director of Product Engineering", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Rama Nedungadi", "LinkedIn Profile": "https://www.linkedin.com/in/ramanedungadi/", "Company": "IBM", "Industry": "IT & Software", "Designation": "Change Leader", "Management Level": "Other", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Venkatesh Duraisamy", "LinkedIn Profile": "https://www.linkedin.com/in/venkateshduraisamy/", "Company": "SanDisk", "Industry": "IT & Software", "Designation": "Director, Data Engineering - Memory Technology", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Ajaykumar Nandigam", "LinkedIn Profile": "https://www.linkedin.com/in/ajaykumar-nandigam/", "Company": "Carelon", "Industry": "Healthcare", "Designation": "Associate Director - Data and Artificial Intelligence", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Manu Ram", "LinkedIn Profile": "https://www.linkedin.com/in/manu-ram-mrt/", "Company": "ETG (Export Trading Group)", "Industry": "Logistics", "Designation": "Global Head \u2013 Risk Solutions & Engineering", "Management Level": "Head", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Bhaskara Venkatesh", "LinkedIn Profile": "https://www.linkedin.com/in/venkatesh-bhaskara-627b065/", "Company": "Cisco", "Industry": "IT & Software", "Designation": "Senior Program Manager- Startups", "Management Level": "Manager", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Vikram Balakrishna", "LinkedIn Profile": "https://www.linkedin.com/in/vikrambalakrishna/", "Company": "ATOS", "Industry": "IT & Software", "Designation": "Senior Director - AI", "Management Level": "Director", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Sangeetha Joseph", "LinkedIn Profile": "https://www.linkedin.com/in/sangeetha-joseph-51787878/", "Company": "Carelon", "Industry": "Healthcare", "Designation": "Senior Manager", "Management Level": "Manager", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Shreevathsa Suresh", "LinkedIn Profile": "https://www.linkedin.com/in/shreevathsa-suresh-41a53220/", "Company": "SAP", "Industry": "IT & Software", "Designation": "Software Development Architecture", "Management Level": "Other", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Srikanth Sathiyanarayanan", "LinkedIn Profile": "https://www.linkedin.com/in/srikanthinaction/overlay/about-this-profile/", "Company": "Uno Minda", "Industry": "Automotive", "Designation": "Head - Advanced Technology Group", "Management Level": "Head", "Location": "Bengaluru", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Swati Anand", "LinkedIn Profile": "", "Company": "Thomson Reuters", "Industry": "IT & Software", "Designation": "VP", "Management Level": "VP", "Location": "Hyderabad", "Meeting Status": "Meeting Held", "Notes": ""}, {"Lead Name": "Super ", "LinkedIn Profile": "", "Company": "Ririr", "Industry": "Automotive", "Designation": "Director", "Management Level": "Director", "Location": "Hyderabad", "Meeting Status": "", "Notes": ""}];
+let aD=[],pC=0,RSEC=60,rfT=null,cdT=null,cdL=60,CH={};
+
+window.onload=()=>{renderAll(SEED);startCD();liveF();};
+
+// ── LIVE FETCH: tries direct first, then 3 proxies ───────────────────
+function liveF(){
+  setSt('fetching');
+  const url=CSV_URL+'&_='+Date.now();
+  // Try direct
+  fetch(url,{cache:'no-store'})
+    .then(r=>{if(!r.ok)throw 0;return r.text();})
+    .then(t=>{const d=parseCSV(t);if(d.length>1){ok(d);}else{throw 0;}})
+    .catch(()=>{
+      // Try proxies in order
+      const P=[
+        'https://api.allorigins.win/raw?url='+encodeURIComponent(url),
+        'https://corsproxy.io/?'+encodeURIComponent(CSV_URL),
+        'https://api.codetabs.com/v1/proxy?quest='+CSV_URL
+      ];
+      tryP(P,0);
+    });
+}
+
+function tryP(P,i){
+  if(i>=P.length){
+    setSt('cached');
+    showN('📦 Showing cached data ('+aD.length+' leads). Live fetch unavailable — your browser blocks cross-origin requests from local files. <b>See fix below ↓</b>','warn');
+    return;
+  }
+  fetch(P[i],{cache:'no-store'})
+    .then(r=>{if(!r.ok)throw 0;return r.text();})
+    .then(t=>{const d=parseCSV(t);if(d.length>1){ok(d);}else{throw 0;}})
+    .catch(()=>tryP(P,i+1));
+}
+
+function ok(d){
+  const prev=pC; pC=d.length;
+  renderAll(d); setSt('live');
+  const ts=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('lf').textContent=ts;
+  if(prev>0&&pC!==prev){
+    const diff=pC-prev;
+    showN((diff>0?'🆕 +'+diff+' new lead(s) added!':'🔄 Data changed!')+ ' Now: '+pC+' leads.','ok');
+    showToast('✅ Updated! '+pC+' leads'+(diff>0?' (+'+diff+')':''));
+  } else {
+    showToast('✅ Live — '+pC+' leads loaded');
+  }
+}
+
+function parseCSV(t){
+  const L=t.trim().split('\n').filter(l=>l.trim());
+  if(L.length<2)return[];
+  const H=pL(L[0]).map(h=>h.trim().replace(/^"|"$/g,''));
+  return L.slice(1).map(l=>{const V=pL(l);const o={};H.forEach((h,i)=>o[h]=(V[i]||'').trim().replace(/^"|"$/g,''));return o;}).filter(r=>r['Lead Name']&&r['Lead Name'].trim());
+}
+function pL(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){if(l[i]==='"'){q=!q;}else if(l[i]===','&&!q){r.push(c);c='';}else{c+=l[i];}}r.push(c);return r;}
+
+function setSt(s){
+  const d=document.getElementById('ldot'),b=document.getElementById('cbadge'),t=document.getElementById('topSt');
+  if(s==='fetching'){t.textContent='🔄 Fetching from Google Sheets...';b.textContent='🔄 Updating...';b.className='badge by';d.style.background='#ffd166';}
+  else if(s==='live'){t.textContent='✅ LIVE — Google Sheets connected · Auto-updating';b.textContent='🟢 Live & Auto-updating';b.className='badge bg';d.style.background='#00e5b8';}
+  else if(s==='cached'){t.textContent='📦 Cached data — see notification for fix';b.textContent='📦 Cached';b.className='badge by';d.style.background='#ffd166';}
+}
+
+let nT=null;
+function showN(msg,type){
+  const el=document.getElementById('nb');
+  const cls={ok:'nok',warn:'nwarn',info:'ninfo'}[type]||'ninfo';
+  el.innerHTML='<div class="nb '+cls+'">'+msg+'</div>';
+  if(nT)clearTimeout(nT);nT=setTimeout(()=>el.innerHTML='',9000);
+}
+
+function cnt(a,k){return a.reduce((m,r)=>{const v=r[k]||'?';m[v]=(m[v]||0)+1;return m;},{});}
+function srt(o){return Object.entries(o).sort((a,b)=>b[1]-a[1]);}
+function topN(o,n){return srt(o).slice(0,n);}
+function dc(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
+const BO={responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{labels:{color:'#8b90b0',font:{size:10,family:'Inter'}}},tooltip:{backgroundColor:'#1a1e2e',borderColor:'#2a2f45',borderWidth:1}},scales:{}};
+
+function renderAll(data){
+  aD=data;
+  const n=data.length,h=data.filter(r=>r['Meeting Status']==='Meeting Held').length,
+    f=data.filter(r=>r['Meeting Status']==='Interested Future').length,
+    cv=Math.round(h/n*100),
+    nI=new Set(data.map(r=>r['Industry']).filter(Boolean)).size,
+    nC=new Set(data.map(r=>r['Location']).filter(Boolean)).size,
+    tl=srt(cnt(data,'Management Level'))[0]||['—',0];
+  aN('k1',n);document.getElementById('k1p').textContent=n+' total';
+  aN('k2',h);document.getElementById('k2s').textContent=cv+'% conversion';
+  aN('k3',f);
+  document.getElementById('k4').textContent=nI;
+  document.getElementById('k5').textContent=nC;
+  document.getElementById('k6').textContent=tl[0];
+  document.getElementById('k6s').textContent=tl[1]+' leads';
+  const ts=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('ft').textContent=ts;
+  dInd(data);dMtg(data,h,f);dLoc(data);dHeat(data);dPolar(data);
+  dCo(data);dCM2(data);dPI(data);dPM(data);dMini(data,h,n);dIns(data,h,f,n,cv);
+  rTbl(data);popF(data);
+}
+
+function aN(id,target){
+  const el=document.getElementById(id);const s=parseInt(el.textContent)||0;
+  if(s===target){el.textContent=target;return;}
+  let c=s;const inc=Math.ceil(Math.abs(target-s)/20);
+  const t=setInterval(()=>{c+=(target>s?inc:-inc);if((target>s&&c>=target)||(target<=s&&c<=target)){c=target;clearInterval(t);}el.textContent=c;},25);
+}
+
+function dInd(d){dc('i');const t=topN(cnt(d,'Industry'),9);
+  CH['i']=new Chart(document.getElementById('cInd'),{type:'doughnut',
+    data:{labels:t.map(x=>x[0]),datasets:[{data:t.map(x=>x[1]),backgroundColor:PAL,borderColor:'#12151f',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'right',labels:{color:'#8b90b0',font:{size:9},boxWidth:10,padding:7}},tooltip:{backgroundColor:'#1a1e2e',borderColor:'#2a2f45',borderWidth:1}}}});}
+
+function dMtg(d,h,f){dc('m');
+  CH['m']=new Chart(document.getElementById('cMtg'),{type:'doughnut',
+    data:{labels:['Meeting Held','Interested Future'],datasets:[{data:[h,f],backgroundColor:['#00e5b8','#ffd166'],borderColor:'#12151f',borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'66%',
+      plugins:{legend:{position:'bottom',labels:{color:'#8b90b0',font:{size:9},boxWidth:10,padding:8}},tooltip:{backgroundColor:'#1a1e2e',borderColor:'#2a2f45',borderWidth:1}}},
+    plugins:[{id:'ct',beforeDraw(c){const{ctx:x,chartArea:{top,bottom,left,right}}=c;x.save();
+      const cx=(left+right)/2,cy=(top+bottom)/2;
+      x.fillStyle='#fff';x.font='bold 22px Inter';x.textAlign='center';
+      x.fillText(h,cx,cy+4);x.fillStyle='#8b90b0';x.font='9px Inter';
+      x.fillText('Meetings Held',cx,cy+18);x.restore();}}]});}
+
+function dLoc(d){dc('l');const t=topN(cnt(d,'Location'),7);
+  CH['l']=new Chart(document.getElementById('cLoc'),{type:'bar',
+    data:{labels:t.map(x=>x[0]),datasets:[{label:'Leads',data:t.map(x=>x[1]),backgroundColor:PAL.map(c=>c+'bb'),borderColor:PAL,borderWidth:2,borderRadius:7}]},
+    options:{...BO,scales:{x:{ticks:{color:'#8b90b0',font:{size:9}},grid:{color:'#ffffff08'}},y:{ticks:{color:'#8b90b0',font:{size:9}},grid:{color:'#ffffff0c'},beginAtZero:true}}}});}
+
+function dHeat(d){dc('h');const ti=topN(cnt(d,'Industry'),6).map(x=>x[0]);
+  const lv=['Director','Head','VP','C-Level','General Manager','Manager','Other'];
+  const ds=lv.map((l,i)=>({label:l,data:ti.map(ind=>d.filter(r=>r['Industry']===ind&&r['Management Level']===l).length),backgroundColor:PAL[i]+'cc',borderColor:PAL[i],borderWidth:1,borderRadius:4}));
+  CH['h']=new Chart(document.getElementById('cHeat'),{type:'bar',data:{labels:ti,datasets:ds},
+    options:{...BO,scales:{x:{stacked:true,ticks:{color:'#8b90b0',font:{size:9}},grid:{color:'#ffffff08'}},y:{stacked:true,ticks:{color:'#8b90b0',font:{size:9}},grid:{color:'#ffffff0c'},beginAtZero:true}}}});}
+
+function dPolar(d){dc('p');const e=srt(cnt(d,'Management Level'));
+  CH['p']=new Chart(document.getElementById('cPolar'),{type:'polarArea',
+    data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL.map(c=>c+'99'),borderColor:PAL,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:'#8b90b0',font:{size:9},boxWidth:9,padding:6}},tooltip:{backgroundColor:'#1a1e2e',borderColor:'#2a2f45',borderWidth:1}},
+      scales:{r:{ticks:{color:'#8b90b0',font:{size:8}},grid:{color:'#ffffff0a'}}}}});}
+
+function dCo(d){dc('c');const t=topN(cnt(d,'Company'),9);
+  CH['c']=new Chart(document.getElementById('cCo'),{type:'bar',
+    data:{labels:t.map(x=>x[0]),datasets:[{label:'Leads',data:t.map(x=>x[1]),backgroundColor:PAL.map(c=>c+'bb'),borderColor:PAL,borderWidth:2,borderRadius:6,barThickness:16}]},
+    options:{...BO,indexAxis:'y',scales:{x:{ticks:{color:'#8b90b0',font:{size:9}},grid:{color:'#ffffff0c'},beginAtZero:true},y:{ticks:{color:'#8b90b0',font:{size:9}},grid:{color:'#ffffff08'}}}}});}
+
+function dCM2(d){dc('cm');const ci=topN(cnt(d,'Location'),5).map(x=>x[0]);
+  const ds=[{label:'Meeting Held',color:'#00e5b8',data:ci.map(c=>d.filter(r=>r['Location']===c&&r['Meeting Status']==='Meeting Held').length)},
+            {label:'Interested Future',color:'#ffd166',data:ci.map(c=>d.filter(r=>r['Location']===c&&r['Meeting Status']==='Interested Future').length)}]
+    .map(x=>({...x,backgroundColor:x.color+'bb',borderColor:x.color,borderWidth:2,borderRadius:6}));
+  CH['cm']=new Chart(document.getElementById('cCM'),{type:'bar',data:{labels:ci,datasets:ds},
+    options:{...BO,scales:{x:{ticks:{color:'#8b90b0',font:{size:9}},grid:{color:'#ffffff08'}},y:{ticks:{color:'#8b90b0',font:{size:9}},grid:{color:'#ffffff0c'},beginAtZero:true}}}});}
+
+function dPI(d){const n=d.length,c=cnt(d,'Industry');
+  document.getElementById('pInd').innerHTML=srt(c).slice(0,8).map((e,i)=>
+    '<div><div class="pr"><span class="plbl">'+e[0]+'</span><span class="pval">'+e[1]+' ('+Math.round(e[1]/n*100)+'%)</span></div>'+
+    '<div class="pt"><div class="pf" style="width:'+e[1]/n*100+'%;background:'+PAL[i%PAL.length]+'"></div></div></div>').join('');}
+
+function dPM(d){const n=d.length,c=cnt(d,'Management Level');
+  document.getElementById('pMgmt').innerHTML=srt(c).map((e,i)=>
+    '<div><div class="pr"><span class="plbl">'+e[0]+'</span><span class="pval">'+e[1]+' ('+Math.round(e[1]/n*100)+'%)</span></div>'+
+    '<div class="pt"><div class="pf" style="width:'+e[1]/n*100+'%;background:'+PAL[i%PAL.length]+'"></div></div></div>').join('');}
+
+function dMini(d,h,n){
+  const ti=srt(cnt(d,'Industry'))[0],tc=srt(cnt(d,'Location'))[0],tco=srt(cnt(d,'Company'))[0];
+  document.getElementById('ms').innerHTML=[
+    ['🏆','Dominant Industry',ti[0]+' ('+ti[1]+' leads)'],
+    ['📍','Top City',tc[0]+' ('+tc[1]+' leads)'],
+    ['🏢','Top Company',tco[0]+' ('+tco[1]+' leads)'],
+    ['📈','Conversion',Math.round(h/n*100)+'% ('+h+'/'+n+')'],
+    ['🔗','Companies',''+new Set(d.map(r=>r['Company'])).size+' unique'],
+  ].map(([i,l,v])=>'<div style="background:var(--s2);border:1px solid var(--br);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px">'+
+    '<span style="font-size:17px">'+i+'</span><div><div style="font-size:9.5px;color:var(--tx2)">'+l+'</div><div style="font-size:14px;font-weight:800">'+v+'</div></div></div>').join('');}
+
+function dIns(d,h,f,n,cv){
+  const ti=srt(cnt(d,'Industry'))[0],tc=srt(cnt(d,'Location'))[0],tm=srt(cnt(d,'Management Level'))[0];
+  document.getElementById('ig').innerHTML=[
+    {i:'🏆',c:'#7c6bff',t:'Dominant Industry',x:'<b>'+ti[0]+'</b> — '+ti[1]+' contacts ('+Math.round(ti[1]/n*100)+'%). Prioritize for max ROI.'},
+    {i:'📍',c:'#00e5b8',t:'Top Geography',x:'<b>'+tc[0]+'</b> hotspot with '+tc[1]+' leads. City campaigns recommended.'},
+    {i:'🎯',c:'#ffd166',t:'Seniority Sweet Spot',x:'<b>'+tm[0]+'</b>-level most engaged ('+tm[1]+' contacts). Tailor messaging.'},
+    {i:'🚀',c:'#ff6b6b',t:'Pipeline Opportunity',x:'<b>'+f+' warm leads</b> need follow-up. Start nurture sequence now.'},
+    {i:'✅',c:'#4ecdc4',t:'Conversion Performance',x:'<b>'+cv+'% conversion</b> — '+h+' meetings from '+n+'. Outstanding!'},
+    {i:'💡',c:'#b8b0ff',t:'Persona Recommendation',x:'Target <b>'+tm[0]+'-level</b> in <b>'+ti[0]+'</b> sector in <b>'+tc[0]+'</b>.'},
+  ].map(o=>'<div class="ins" style="--ic:'+o.c+'"><div class="ii">'+o.i+'</div><div><div class="it">'+o.t+'</div><div class="ib">'+o.x+'</div></div></div>').join('');}
+
+const LVC={'Director':'t1','Head':'t2','VP':'t5','C-Level':'t3','General Manager':'t4','Manager':'t4','Other':'t1'};
+const MTC={'Meeting Held':'t2','Interested Future':'t4'};
+
+function rTbl(d){
+  document.getElementById('tc2').textContent=d.length+' leads';
+  document.getElementById('tb').innerHTML=d.map((r,i)=>'<tr>'+
+    '<td style="color:var(--tx3)">'+(i+1)+'</td>'+
+    '<td><b>'+(r['Lead Name']||'—')+'</b></td>'+
+    '<td>'+(r['Company']||'—')+'</td>'+
+    '<td><span class="tg t5">'+(r['Industry']||'—')+'</span></td>'+
+    '<td title="'+(r['Designation']||'')+'">'+(r['Designation']||'—').substring(0,34)+((r['Designation']||'').length>34?'…':'')+'</td>'+
+    '<td><span class="tg '+(LVC[r['Management Level']]||'t1')+'">'+(r['Management Level']||'—')+'</span></td>'+
+    '<td>📍'+(r['Location']||'—')+'</td>'+
+    '<td><span class="tg '+(MTC[r['Meeting Status']]||'t1')+'">'+(r['Meeting Status']||'—')+'</span></td>'+
+    '<td>'+(r['LinkedIn Profile']?'<a class="lnk" href="'+r['LinkedIn Profile']+'" target="_blank">🔗 View</a>':'—')+'</td>'+
+    '</tr>').join('');}
+
+function popF(d){
+  const p=(id,k)=>{const el=document.getElementById(id);const f=el.options[0];el.innerHTML='';el.appendChild(f);
+    [...new Set(d.map(r=>r[k]).filter(Boolean))].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);});};
+  p('fI','Industry');p('fM','Management Level');p('fC','Location');p('fS','Meeting Status');}
+
+function fTbl(){
+  const q=document.getElementById('srch').value.toLowerCase();
+  const fi=document.getElementById('fI').value,fm=document.getElementById('fM').value,
+        fc=document.getElementById('fC').value,fs=document.getElementById('fS').value;
+  const fd=aD.filter(r=>{const s=(r['Lead Name']+' '+r['Company']+' '+r['Designation']+' '+r['Notes']).toLowerCase();
+    return(!q||s.includes(q))&&(!fi||r['Industry']===fi)&&(!fm||r['Management Level']===fm)&&(!fc||r['Location']===fc)&&(!fs||r['Meeting Status']===fs);});
+  rTbl(fd);document.getElementById('tc2').textContent=fd.length+' leads shown';}
+function clrF(){document.getElementById('srch').value='';['fI','fM','fC','fS'].forEach(id=>document.getElementById(id).selectedIndex=0);fTbl();}
+
+function startCD(){
+  if(rfT)clearInterval(rfT);if(cdT)clearInterval(cdT);cdL=RSEC;
+  rfT=setInterval(()=>{cdL=RSEC;liveF();},RSEC*1000);
+  cdT=setInterval(()=>{cdL--;document.getElementById('cd').textContent=cdL;if(cdL<=0)cdL=RSEC;},1000);
+  document.getElementById('cd').textContent=cdL;}
+function setR(v){RSEC=parseInt(v);startCD();showToast('⏱ Auto-refresh: every '+v+'s');}
+function manRf(){
+  const btn=document.getElementById('rfb'),ico=document.getElementById('rfic');
+  btn.disabled=true;ico.className='rfi spin';
+  liveF();setTimeout(()=>{btn.disabled=false;ico.className='rfi';cdL=RSEC;},2500);}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+</script></body></html>
