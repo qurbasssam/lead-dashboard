@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Lead Intelligence Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d0d1a;color:#e0e0ff;font-family:'Segoe UI',sans-serif;min-height:100vh;}
+
+/* LOADER */
+#loader{position:fixed;inset:0;background:#0d0d1a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
+.spin{width:52px;height:52px;border:4px solid #22224a;border-top-color:#7c6fff;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:16px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{color:#555a80;font-size:0.9rem;}
+
+.header{background:linear-gradient(135deg,#12122a,#1a1a3e);padding:22px 32px;border-bottom:1px solid #2a2a4a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.logo-title{font-size:1.5rem;font-weight:800;background:linear-gradient(90deg,#7c6fff,#ff6bb5,#00d2ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo-sub{font-size:0.75rem;color:#666a99;margin-top:2px;}
+.live-badge{background:rgba(67,233,123,0.1);border:1px solid rgba(67,233,123,0.3);color:#43e97b;padding:5px 14px;border-radius:20px;font-size:0.75rem;font-weight:600;display:flex;align-items:center;gap:6px;}
+.live-dot{width:7px;height:7px;background:#43e97b;border-radius:50%;animation:blink 1.5s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+.refresh-btn{background:rgba(124,111,255,0.12);color:#7c6fff;border:1px solid rgba(124,111,255,0.3);padding:6px 14px;border-radius:10px;font-size:0.75rem;cursor:pointer;transition:.2s;}
+.refresh-btn:hover{background:rgba(124,111,255,0.25);}
+.last-updated{font-size:0.72rem;color:#555a80;}
+
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:16px;padding:24px 32px;}
+.kpi{background:#141428;border:1px solid #22224a;border-radius:16px;padding:20px;position:relative;overflow:hidden;transition:.3s;}
+.kpi:hover{transform:translateY(-3px);border-color:#7c6fff;box-shadow:0 8px 30px rgba(124,111,255,0.1);}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi.purple::after{background:linear-gradient(90deg,#7c6fff,#ff6bb5);}
+.kpi.green::after{background:linear-gradient(90deg,#43e97b,#38f9d7);}
+.kpi.blue::after{background:linear-gradient(90deg,#00d2ff,#3a7bd5);}
+.kpi.pink::after{background:linear-gradient(90deg,#ff6bb5,#ff8c42);}
+.kpi.gold::after{background:linear-gradient(90deg,#ffd93d,#ff9a00);}
+.kpi.teal::after{background:linear-gradient(90deg,#38f9d7,#43e97b);}
+.kpi-icon{font-size:1.5rem;margin-bottom:8px;}
+.kpi-label{font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;color:#555a80;}
+.kpi-val{font-size:2rem;font-weight:800;color:#fff;margin:4px 0 2px;}
+.kpi-sub{font-size:0.7rem;color:#555a80;}
+
+.section{padding:0 32px 28px;}
+.sec-title{font-size:1rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.sec-title .hl{background:linear-gradient(90deg,#7c6fff,#ff6bb5);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px;}
+.grid-3b{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;}
+.card{background:#141428;border:1px solid #22224a;border-radius:16px;padding:20px;transition:.3s;}
+.card:hover{border-color:#7c6fff44;box-shadow:0 4px 24px rgba(124,111,255,0.08);}
+.card-title{font-size:0.85rem;font-weight:700;color:#c0c0e0;}
+.card-sub{font-size:0.7rem;color:#444a70;margin-bottom:14px;margin-top:2px;}
+.tag{float:right;font-size:0.62rem;padding:2px 8px;border-radius:8px;background:rgba(124,111,255,0.12);color:#7c6fff;}
+canvas{max-height:240px;}
+
+.prog-list{display:flex;flex-direction:column;gap:13px;}
+.prog-hdr{display:flex;justify-content:space-between;margin-bottom:5px;font-size:0.78rem;}
+.prog-name{color:#c0c0e0;}
+.prog-val{color:#555a80;}
+.prog-bg{background:#1e1e3a;border-radius:6px;height:7px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:6px;}
+
+.qs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;}
+.qs{background:#1a1a30;border:1px solid #22224a;border-radius:12px;padding:14px;text-align:center;}
+.qs-val{font-size:1.4rem;font-weight:800;}
+.qs-label{font-size:0.68rem;color:#555a80;margin-top:4px;}
+
+.insights-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
+.insight{background:linear-gradient(135deg,rgba(124,111,255,0.07),rgba(255,107,181,0.04));border:1px solid rgba(124,111,255,0.18);border-radius:14px;padding:18px;}
+.ins-icon{font-size:1.3rem;margin-bottom:7px;}
+.ins-title{font-size:0.82rem;font-weight:700;color:#7c6fff;margin-bottom:5px;}
+.ins-text{font-size:0.75rem;color:#555a80;line-height:1.6;}
+
+.tbl-hdr{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px;}
+.tbl-count{font-size:0.78rem;color:#555a80;}
+.filters{display:flex;gap:8px;flex-wrap:wrap;}
+.fsel{background:#141428;color:#c0c0e0;border:1px solid #22224a;padding:7px 12px;border-radius:10px;font-size:0.75rem;cursor:pointer;outline:none;}
+.fsel:focus{border-color:#7c6fff;}
+.fbtn{background:rgba(255,107,181,0.12);color:#ff6bb5;border:none;padding:7px 13px;border-radius:10px;font-size:0.75rem;cursor:pointer;}
+.tbl-wrap{overflow-x:auto;border-radius:14px;border:1px solid #22224a;}
+table{width:100%;border-collapse:collapse;}
+thead{background:linear-gradient(135deg,#141428,#1a1a30);}
+th{padding:12px 14px;text-align:left;font-size:0.7rem;text-transform:uppercase;letter-spacing:.8px;color:#444a70;border-bottom:1px solid #22224a;white-space:nowrap;}
+td{padding:10px 14px;font-size:0.78rem;border-bottom:1px solid #1a1a2a;vertical-align:top;}
+tr:hover td{background:rgba(124,111,255,0.04);}
+.badge{padding:3px 9px;border-radius:9px;font-size:0.68rem;font-weight:600;white-space:nowrap;}
+.b-held{background:rgba(67,233,123,0.12);color:#43e97b;}
+.b-future{background:rgba(0,210,255,0.12);color:#00d2ff;}
+.b-ind{background:rgba(124,111,255,0.1);color:#9a90ff;}
+.b-lvl{background:rgba(255,107,181,0.1);color:#ff6bb5;}
+.li-a{color:#7c6fff;text-decoration:none;font-size:0.72rem;}
+.li-a:hover{color:#ff6bb5;}
+.notes-cell{max-width:200px;font-size:0.7rem;color:#444a70;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.footer{text-align:center;padding:20px;color:#333550;font-size:0.7rem;border-top:1px solid #1a1a2a;margin-top:8px;}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+
+@media(max-width:640px){
+  .header,.section,.kpi-row{padding-left:16px;padding-right:16px;}
+  .kpi-val{font-size:1.6rem;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="spin"></div>
+  <div class="load-txt">Fetching live data from Google Sheets...</div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div class="logo-title">📊 Lead Intelligence Dashboard</div>
+    <div class="logo-sub" id="headerSub">Loading...</div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><span class="live-dot"></span> LIVE</div>
+    <button class="refresh-btn" onclick="loadData()">🔄 Refresh</button>
+    <div class="last-updated" id="lastUpd">—</div>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="kpi-row" id="kpiRow"></div>
+
+<!-- CORE CHARTS -->
+<div class="section">
+  <div class="sec-title">📊 <span class="hl">Core Analytics</span></div>
+  <div class="grid-3">
+    <div class="card"><span class="tag">Donut</span><div class="card-title">🏭 Industry Breakdown</div><div class="card-sub">Sector distribution</div><canvas id="cIndustry"></canvas></div>
+    <div class="card"><span class="tag">Donut</span><div class="card-title">📅 Meeting Pipeline</div><div class="card-sub">Status overview</div><canvas id="cMeeting"></canvas></div>
+    <div class="card"><span class="tag">Bar</span><div class="card-title">📍 Geographic Reach</div><div class="card-sub">Leads by city</div><canvas id="cCity"></canvas></div>
+  </div>
+</div>
+
+<!-- CROSS ANALYSIS -->
+<div class="section">
+  <div class="sec-title">🔥 <span class="hl">Cross Analysis</span></div>
+  <div class="grid-2">
+    <div class="card"><span class="tag">Stacked</span><div class="card-title">🔥 Industry × Management Level</div><div class="card-sub">Seniority spread across sectors</div><canvas id="cHeatmap"></canvas></div>
+    <div class="card"><span class="tag">Polar</span><div class="card-title">🎯 Seniority Distribution</div><div class="card-sub">Management level breakdown</div><canvas id="cSeniority"></canvas></div>
+  </div>
+</div>
+
+<!-- COMPANY & CONVERSION -->
+<div class="section">
+  <div class="sec-title">🏆 <span class="hl">Company & Conversion</span></div>
+  <div class="grid-3b">
+    <div class="card"><span class="tag">Horiz</span><div class="card-title">🏢 Top Companies</div><div class="card-sub">By lead count</div><canvas id="cCompany"></canvas></div>
+    <div class="card"><span class="tag">Grouped</span><div class="card-title">🗺 City × Meeting Status</div><div class="card-sub">Conversion by geography</div><canvas id="cCityStatus"></canvas></div>
+    <div class="card"><div class="card-title">📈 Industry Coverage</div><div class="card-sub">% share of total leads</div><div class="prog-list" id="indProgress"></div></div>
+  </div>
+</div>
+
+<!-- FUNNEL + QUICK STATS -->
+<div class="section">
+  <div class="grid-2">
+    <div class="card"><div class="card-title">📊 Management Funnel</div><div class="card-sub">Seniority reach %</div><div class="prog-list" id="mgmtProgress"></div></div>
+    <div class="card"><div class="card-title">⚡ Quick Stats</div><div class="card-sub">Key performance indicators</div><div class="qs-grid" id="quickStats"></div></div>
+  </div>
+</div>
+
+<!-- INSIGHTS -->
+<div class="section">
+  <div class="sec-title">💡 <span class="hl">AI-Generated Insights</span></div>
+  <div class="insights-grid" id="insightsGrid"></div>
+</div>
+
+<!-- TABLE -->
+<div class="section">
+  <div class="tbl-hdr">
+    <div><div style="font-size:1rem;font-weight:700;">📋 Lead Intelligence Table</div><div class="tbl-count" id="tblCount">Loading...</div></div>
+    <div class="filters">
+      <select class="fsel" id="fInd" onchange="applyFilter()"><option value="">All Industries</option></select>
+      <select class="fsel" id="fLvl" onchange="applyFilter()"><option value="">All Levels</option></select>
+      <select class="fsel" id="fCity" onchange="applyFilter()"><option value="">All Cities</option></select>
+      <select class="fsel" id="fStatus" onchange="applyFilter()"><option value="">All Statuses</option></select>
+      <button class="fbtn" onclick="clearFilter()">✕ Clear</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Lead Name</th><th>Company</th><th>Industry</th><th>Designation</th><th>Level</th><th>City</th><th>Status</th><th>LinkedIn</th><th>Notes</th></tr></thead>
+      <tbody id="tblBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">Lead Intelligence Dashboard &nbsp;·&nbsp; Live data from Google Sheets &nbsp;·&nbsp; Auto-updates on every refresh 🔄</div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────────────────────
+const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNVwRgnzgDr1TVNnin70KN8k9Vxjd9GNjDdZVH3flAMwDpKhSwX4InZvEr1DKCCpZLuirjcTwE0HjE/pub?output=csv';
+const PAL = ['#7c6fff','#ff6bb5','#00d2ff','#43e97b','#ffd93d','#ff8c42','#a29bfe','#fd79a8','#55efc4','#fdcb6e','#e17055','#74b9ff','#00cec9','#6c5ce7','#b2bec3'];
+let RAW = [];
+let charts = {};
+
+// ── LOAD DATA ──────────────────────────────────────────────────────────────────
+function loadData() {
+  document.getElementById('loader').style.display = 'flex';
+  // destroy existing charts
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+
+  Papa.parse(SHEET_CSV, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      RAW = results.data.map(r => {
+        const clean = {};
+        Object.keys(r).forEach(k => clean[k.trim()] = (r[k]||'').trim());
+        return clean;
+      });
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('lastUpd').textContent = 'Updated: ' + new Date().toLocaleString();
+      document.getElementById('headerSub').textContent = RAW.length + ' Leads · Live from Google Sheets';
+      buildAll();
+    },
+    error: function() {
+      document.getElementById('loader').innerHTML = '<div style="color:#ff6bb5;font-size:1rem;">❌ Failed to load data. Check your sheet is published.</div>';
+    }
+  });
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────────
+function countBy(data, key) {
+  const m = {};
+  data.forEach(r => { const v = (r[key]||'').trim(); if(v) m[v] = (m[v]||0)+1; });
+  return Object.entries(m).sort((a,b) => b[1]-a[1]);
+}
+
+function mkChart(id, type, labels, datasets, extra={}) {
+  if(charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  charts[id] = new Chart(ctx, {
+    type, data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ labels:{ color:'#666a99', font:{size:10}, boxWidth:12 } } },
+      scales: (type==='bar') ? {
+        x:{ ticks:{color:'#555a80',font:{size:10}}, grid:{color:'rgba(255,255,255,0.04)'} },
+        y:{ ticks:{color:'#555a80',font:{size:10}}, grid:{color:'rgba(255,255,255,0.04)'} }
+      } : {},
+      ...extra
+    }
+  });
+}
+
+// ── BUILD ALL ──────────────────────────────────────────────────────────────────
+function buildAll() {
+  buildKPI();
+  buildCharts();
+  buildProgress();
+  buildQuickStats();
+  buildInsights();
+  populateFilters();
+  applyFilter();
+}
+
+// ── KPI ────────────────────────────────────────────────────────────────────────
+function buildKPI() {
+  const d = RAW;
+  const total = d.length;
+  const held  = d.filter(r=>(r['Meeting Status']||'').toLowerCase().includes('held')).length;
+  const future= d.filter(r=>(r['Meeting Status']||'').toLowerCase().includes('interest')).length;
+  const inds  = new Set(d.map(r=>r['Industry']).filter(Boolean)).size;
+  const cities= new Set(d.map(r=>r['Location']).filter(Boolean)).size;
+  const topLvl= countBy(d,'Management Level')[0]||['—',0];
+
+  const cards = [
+    {cls:'purple',icon:'👥',label:'Total Leads',val:total,sub:'All contacts'},
+    {cls:'green', icon:'🤝',label:'Meetings Held',val:held,sub:Math.round(held/total*100)+'% conversion'},
+    {cls:'blue',  icon:'🕐',label:'Warm Pipeline',val:future,sub:'Interested future'},
+    {cls:'pink',  icon:'🏭',label:'Industries',val:inds,sub:'Sectors covered'},
+    {cls:'gold',  icon:'📍',label:'Cities',val:cities,sub:'Geographic reach'},
+    {cls:'teal',  icon:'💼',label:'Top Level',val:topLvl[0],sub:topLvl[1]+' leads'},
+  ];
+
+  document.getElementById('kpiRow').innerHTML = cards.map(c=>`
+    <div class="kpi ${c.cls}">
+      <div class="kpi-icon">${c.icon}</div>
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-val">${c.val}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+// ── CHARTS ─────────────────────────────────────────────────────────────────────
+function buildCharts() {
+  const d = RAW;
+
+  // Industry donut
+  const ind = countBy(d,'Industry');
+  mkChart('cIndustry','doughnut', ind.map(x=>x[0]), [{
+    data:ind.map(x=>x[1]), backgroundColor:PAL, borderWidth:2, borderColor:'#141428'
+  }], {plugins:{legend:{position:'bottom',labels:{color:'#666a99',font:{size:9},boxWidth:10}}}});
+
+  // Meeting donut
+  const mt = countBy(d,'Meeting Status');
+  mkChart('cMeeting','doughnut', mt.map(x=>x[0]), [{
+    data:mt.map(x=>x[1]), backgroundColor:['#43e97b','#00d2ff','#ff6bb5','#ffd93d'], borderWidth:2, borderColor:'#141428'
+  }], {plugins:{legend:{position:'bottom',labels:{color:'#666a99',font:{size:9},boxWidth:10}}}});
+
+  // City bar
+  const ct = countBy(d,'Location');
+  mkChart('cCity','bar', ct.map(x=>x[0]), [{
+    label:'Leads', data:ct.map(x=>x[1]),
+    backgroundColor:ct.map((_,i)=>PAL[i%PAL.length]), borderRadius:6
+  }], {plugins:{legend:{display:false}}});
+
+  // Stacked heatmap
+  const topInds = countBy(d,'Industry').slice(0,8).map(x=>x[0]);
+  const mgmts   = [...new Set(d.map(r=>r['Management Level']).filter(Boolean))];
+  mkChart('cHeatmap','bar', topInds,
+    mgmts.map((lvl,i)=>({
+      label:lvl, stack:'s', borderRadius:3,
+      backgroundColor:PAL[i%PAL.length],
+      data:topInds.map(ind=>d.filter(r=>r['Industry']===ind&&r['Management Level']===lvl).length)
+    })),
+    {plugins:{legend:{position:'bottom',labels:{color:'#666a99',font:{size:9},boxWidth:10}}},
+     scales:{x:{stacked:true,ticks:{color:'#555a80',font:{size:9},maxRotation:30},grid:{color:'rgba(255,255,255,0.04)'}},y:{stacked:true,ticks:{color:'#555a80',font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}}}});
+
+  // Polar seniority
+  const sn = countBy(d,'Management Level');
+  mkChart('cSeniority','polarArea', sn.map(x=>x[0]), [{
+    data:sn.map(x=>x[1]), backgroundColor:PAL.map(c=>c+'aa'), borderWidth:2, borderColor:'#141428'
+  }], {plugins:{legend:{position:'bottom',labels:{color:'#666a99',font:{size:9},boxWidth:10}}}});
+
+  // Top companies (horizontal bar)
+  const co = countBy(d,'Company').slice(0,10);
+  mkChart('cCompany','bar', co.map(x=>x[0]), [{
+    label:'Leads', data:co.map(x=>x[1]),
+    backgroundColor:PAL.map(c=>c+'cc'), borderRadius:5
+  }], {indexAxis:'y', plugins:{legend:{display:false}}, scales:{
+    x:{ticks:{color:'#555a80',font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}},
+    y:{ticks:{color:'#555a80',font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}}
+  }});
+
+  // City × Status
+  const topCities = countBy(d,'Location').slice(0,6).map(x=>x[0]);
+  const statuses  = [...new Set(d.map(r=>r['Meeting Status']).filter(Boolean))];
+  mkChart('cCityStatus','bar', topCities,
+    statuses.map((s,i)=>({
+      label:s, borderRadius:5,
+      backgroundColor:['#43e97b','#00d2ff','#ff6bb5','#ffd93d'][i]||PAL[i],
+      data:topCities.map(c=>d.filter(r=>r['Location']===c&&r['Meeting Status']===s).length)
+    })),
+    {plugins:{legend:{position:'bottom',labels:{color:'#666a99',font:{size:9},boxWidth:10}}},
+     scales:{x:{ticks:{color:'#555a80',font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#555a80',font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}}}});
+}
+
+// ── PROGRESS ───────────────────────────────────────────────────────────────────
+function buildProgress() {
+  const d = RAW, total = d.length;
+  const ind = countBy(d,'Industry').slice(0,9);
+  const mg  = countBy(d,'Management Level');
+  const render = (list, el) => {
+    document.getElementById(el).innerHTML = list.map((x,i)=>`
+      <div>
+        <div class="prog-hdr"><span class="prog-name">${x[0]}</span><span class="prog-val">${x[1]} (${Math.round(x[1]/total*100)}%)</span></div>
+        <div class="prog-bg"><div class="prog-fill" style="width:${Math.round(x[1]/total*100)}%;background:${PAL[i%PAL.length]};"></div></div>
+      </div>`).join('');
+  };
+  render(ind,'indProgress');
+  render(mg,'mgmtProgress');
+}
+
+// ── QUICK STATS ────────────────────────────────────────────────────────────────
+function buildQuickStats() {
+  const d = RAW, total = d.length;
+  const held     = d.filter(r=>(r['Meeting Status']||'').toLowerCase().includes('held')).length;
+  const topInd   = countBy(d,'Industry')[0]||['—',0];
+  const topCity  = countBy(d,'Location')[0]||['—',0];
+  const topMgmt  = countBy(d,'Management Level')[0]||['—',0];
+  const companies= new Set(d.map(r=>r['Company']).filter(Boolean)).size;
+
+  const stats = [
+    {val:Math.round(held/total*100)+'%', label:'Conversion Rate', color:'#43e97b'},
+    {val:topInd[0], label:'Top Industry', color:'#7c6fff'},
+    {val:topCity[0], label:'Top City', color:'#00d2ff'},
+    {val:topMgmt[0], label:'Top Level', color:'#ff6bb5'},
+    {val:companies, label:'Companies', color:'#ffd93d'},
+    {val:total-held, label:'Open Pipeline', color:'#fd79a8'},
+  ];
+  document.getElementById('quickStats').innerHTML = stats.map(s=>`
+    <div class="qs">
+      <div class="qs-val" style="color:${s.color}">${s.val}</div>
+      <div class="qs-label">${s.label}</div>
+    </div>`).join('');
+}
+
+// ── INSIGHTS ───────────────────────────────────────────────────────────────────
+function buildInsights() {
+  const d = RAW, total = d.length;
+  const held   = d.filter(r=>(r['Meeting Status']||'').toLowerCase().includes('held')).length;
+  const future = d.filter(r=>(r['Meeting Status']||'').toLowerCase().includes('interest')).length;
+  const topInd = countBy(d,'Industry')[0]||['—',0];
+  const topCity= countBy(d,'Location')[0]||['—',0];
+  const topMgmt= countBy(d,'Management Level')[0]||['—',0];
+  const topCo  = countBy(d,'Company')[0]||['—',0];
+  const conv   = Math.round(held/total*100);
+
+  const ins = [
+    {icon:'🚀',title:'Conversion Rate',text:`${conv}% meeting conversion — ${held} of ${total} leads successfully converted. Strong outreach performance!`},
+    {icon:'🏭',title:'Dominant Industry',text:`"${topInd[0]}" leads all sectors with ${topInd[1]} leads (${Math.round(topInd[1]/total*100)}%). Deepen engagement here for maximum ROI.`},
+    {icon:'📍',title:'Geographic Hotspot',text:`"${topCity[0]}" is your strongest market. Consider local networking events to capitalize on this concentration.`},
+    {icon:'💼',title:'Seniority Sweet Spot',text:`"${topMgmt[0]}" is your most engaged segment — your messaging is reaching the right decision-makers.`},
+    {icon:'🏢',title:'Company Density',text:`"${topCo[0]}" has the most leads (${topCo[1]}). A multi-stakeholder strategy here can accelerate deal closure.`},
+    {icon:'🎯',title:'Warm Pipeline Ready',text:`${future} leads are interested future meetings — a warm nurture list ready for structured follow-up.`},
+  ];
+  document.getElementById('insightsGrid').innerHTML = ins.map(i=>`
+    <div class="insight">
+      <div class="ins-icon">${i.icon}</div>
+      <div class="ins-title">${i.title}</div>
+      <div class="ins-text">${i.text}</div>
+    </div>`).join('');
+}
+
+// ── TABLE ──────────────────────────────────────────────────────────────────────
+function populateFilters() {
+  const fields = {fInd:'Industry',fLvl:'Management Level',fCity:'Location',fStatus:'Meeting Status'};
+  Object.entries(fields).forEach(([id,key])=>{
+    const el = document.getElementById(id);
+    const vals = [...new Set(RAW.map(r=>r[key]).filter(Boolean))].sort();
+    el.innerHTML = `<option value="">All ${key}s</option>` + vals.map(v=>`<option value="${v}">${v}</option>`).join('');
+  });
+}
+
+function applyFilter() {
+  const ind    = document.getElementById('fInd').value;
+  const lvl    = document.getElementById('fLvl').value;
+  const city   = document.getElementById('fCity').value;
+  const status = document.getElementById('fStatus').value;
+  const f = RAW.filter(r=>
+    (!ind    || r['Industry']===ind) &&
+    (!lvl    || r['Management Level']===lvl) &&
+    (!city   || r['Location']===city) &&
+    (!status || r['Meeting Status']===status)
+  );
+  document.getElementById('tblCount').textContent = f.length + ' leads';
+  document.getElementById('tblBody').innerHTML = f.map((r,i)=>`
+    <tr>
+      <td style="color:#333550">${i+1}</td>
+      <td style="font-weight:600;color:#d0d0f0">${r['Lead Name']||'—'}</td>
+      <td>${r['Company']||'—'}</td>
+      <td><span class="badge b-ind">${r['Industry']||'—'}</span></td>
+      <td style="color:#555a80;font-size:0.74rem">${r['Designation']||'—'}</td>
+      <td><span class="badge b-lvl">${r['Management Level']||'—'}</span></td>
+      <td>${r['Location']||'—'}</td>
+      <td><span class="badge ${(r['Meeting Status']||'').toLowerCase().includes('held')?'b-held':'b-future'}">${r['Meeting Status']||'—'}</span></td>
+      <td>${r['LinkedIn Profile']?`<a href="${r['LinkedIn Profile']}" target="_blank" class="li-a">🔗 View</a>`:'—'}</td>
+      <td class="notes-cell" title="${r['Notes']||''}">${r['Notes']||'—'}</td>
+    </tr>`).join('');
+}
+
+function clearFilter() {
+  ['fInd','fLvl','fCity','fStatus'].forEach(id=>document.getElementById(id).value='');
+  applyFilter();
+}
+
+// ── START ──────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
